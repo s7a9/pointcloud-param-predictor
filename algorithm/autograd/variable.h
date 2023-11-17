@@ -53,6 +53,10 @@ public:
 
     Variable(Variable&& other) = default;
 
+    Variable(const Variable& other) = default;
+
+    ~Variable() = default;
+
     /// @brief Compute the gradient of this variable. Clear all gradient after backward.
     inline void backward(const matrix_t& grad) {
         if (!requires_grad_) return;

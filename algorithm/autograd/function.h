@@ -1,6 +1,7 @@
 #pragma once
 
 #include <vector>
+#include <optional>
 #include <Eigen/Dense>
 
 #include <algorithm/autograd/config.h>
@@ -11,11 +12,20 @@ class Variable;
 
 class Function {
 public:
+    inline void inference() { with_grad_ = false; }
+
+    inline void train() { with_grad_ = true; }
+
     virtual Variable forward(const std::vector<Variable*>& input) const = 0;
 
     virtual void backward(const Variable* father, const std::vector<Variable*>& children) const = 0;
 
+    template <class FuncType>
+    FuncType* as() { return reinterpret_cast<FuncType*>(this); }
+
 protected:
+    bool with_grad_ = true;
+
     static void add_deg_out(const std::vector<Variable*>& children);
 };
 
@@ -45,15 +55,18 @@ private:
 
 class MatMul : public Function {
 public:
-    MatMul(matrix_t&& mat):
-        mat_(mat) {}
+    MatMul() = default;
+
+    explicit MatMul(matrix_t&& mat): mat_(mat) {}
+
+    inline void set_mat(matrix_t&& mat) { mat_ = mat; }
 
     Variable forward(const std::vector<Variable*>& input) const;
 
     void backward(const Variable* father, const std::vector<Variable*>& children) const;
 
 private:
-    matrix_t mat_;
+    std::optional<matrix_t> mat_;
 };
 
 class Multiply : public Function {

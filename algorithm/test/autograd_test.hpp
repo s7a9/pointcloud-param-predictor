@@ -1,10 +1,12 @@
+#pragma once
+
 #include <iostream>
 
 #include "algorithm/autograd/autograd.h"
 
 using namespace autograd;
 
-int main() {
+inline int autograd_test() {
 	Variable v1(3, 3);
 	v1 << 1, 2, 3,
 		4, 5, 6,
@@ -13,6 +15,8 @@ int main() {
 	v2 << 1, 2, 3,
 		4, 5, 6,
 		7, 8, 9;
+	matrix_t mat(2, 2); mat << 1, 2, 3, 4;
+	auto ii = mat.row(0);
 	function::WeightedAdd add({ 0.1, 0.2 });
 	function::Multiply mul;
 	auto v3 = add.forward({ &v1, &v2 });

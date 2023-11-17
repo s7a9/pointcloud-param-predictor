@@ -17,7 +17,7 @@ Variable Add::forward(const std::vector<Variable*>& input) const {
     for (auto var: input) {
         result += var->data();
     }
-    return Variable(std::move(result), this, true, input);
+    return Variable(std::move(result), this, with_grad_, input);
 }
 
 void Add::backward(const Variable* father, const std::vector<Variable*>& children) const {
@@ -35,7 +35,7 @@ Variable WeightedAdd::forward(const std::vector<Variable*>& input) const {
     for (int i = 1; i < input.size(); ++i) {
         result += weights_[i] * input[i]->data();
     }
-    return Variable(std::move(result), this, true, input);
+    return Variable(std::move(result), this, with_grad_, input);
 }
 
 void WeightedAdd::backward(const Variable* father, const std::vector<Variable*>& children) const {
@@ -49,11 +49,11 @@ Variable MatMul::forward(const std::vector<Variable*>& input) const {
         throw std::logic_error("MatMul::forward - only accept one input");
     }
     add_deg_out(input);
-    return Variable(mat_ * input[0]->data(), this, true, input);
+    return Variable(*mat_ * input[0]->data(), this, with_grad_, input);
 }
 
 void MatMul::backward(const Variable* father, const std::vector<Variable*>& children) const {
-    children[0]->backward(mat_.transpose() * father->grad());
+    children[0]->backward(mat_->transpose() * father->grad());
 }
 
 Variable Multiply::forward(const std::vector<Variable*>& input) const {
@@ -61,7 +61,7 @@ Variable Multiply::forward(const std::vector<Variable*>& input) const {
         throw std::logic_error("Multiply::forward - only accept two input");
     }
     add_deg_out(input);
-    return Variable(input[0]->data() * input[1]->data(), this, true, input);
+    return Variable(input[0]->data() * input[1]->data(), this, with_grad_, input);
 }
 
 void Multiply::backward(const Variable* father, const std::vector<Variable*>& children) const {
