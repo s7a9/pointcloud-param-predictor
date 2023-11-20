@@ -1,3 +1,4 @@
+#include <ctime>
 #include <iostream>
 
 #include <algorithm/autograd/autograd.h>
@@ -33,22 +34,35 @@ inline int pointcloud_test() {
 	using namespace pointcloud;
 	using namespace autograd;
 	matrix_t end_points(2, 3);
-	end_points << -5, 0, 0, 0, 5, 0;
+	end_points << 0, 0, 0, 1, 1, 1;
 	LineModel line(std::move(end_points));
-	auto& pc = line.generate(400);
+	auto& pc = line.generate(100);
 	std::cout << pc << std::endl;
-	save_pointcloud("pc_test.bin", pc);
-	auto pc2 = load_pointcloud("pc_test.bin");
-	std::cout << "========\n" << pc2 << std::endl;
+	save_pointcloud("pc_test0.bin", pc);
+	return 0;
+}
+
+inline int plane_test() {
+	using namespace pointcloud;
+	using namespace autograd;
+	matrix_t span(2, 3), cornor(1, 3);
+	span << 1, 0, -1, 0, 1, -1;
+	cornor << 0, 0, 1;
+	PlaneModel plane(std::move(span), std::move(cornor));
+	auto& pc = plane.generate(400);
+	std::cout << pc << std::endl;
+	save_pointcloud("pc_test1.bin", pc);
 	return 0;
 }
 
 typedef int(*test_func_t)();
 
 int main() {
+	srand(time(NULL));
 	std::vector<std::pair<std::string, test_func_t>> tests = {
 		{"autograd", autograd_test},
 		{"pointcloud", pointcloud_test},
+		{"plane_test", plane_test},
 	};
 	for (auto& test : tests) {
 		std::cout << "Testing " << test.first << "..." << std::endl;

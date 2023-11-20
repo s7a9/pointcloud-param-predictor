@@ -75,6 +75,8 @@ public:
 
     inline const bool has_grad() const { return grad_.has_value(); }
 
+    inline matrix_t& grad() { return grad_.value(); }
+
     inline const matrix_t& grad() const { return grad_.value(); }
 
     inline const std::vector<Variable*>& children() const { return children_; }

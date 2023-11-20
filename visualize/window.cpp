@@ -11,11 +11,22 @@ namespace visual {
 constexpr float min_lookat_distance = 1.0f;
 
 GlWindow::GlWindow(int x, int y, int w, int h, const char* l) :
-	Fl_Gl_Window(x, y, w, h, l) {
+	Fl_Gl_Window(x, y, w, h, l),
+	target_(pointcloud::load_pointcloud(R"(pc_test1.bin)")),
+	plane_(pointcloud::pointcloud_t::Zero(2, 3),
+		  pointcloud::pointcloud_t::Zero(1, 3)) {
 	end();
 	cp_x_ = cp_y_ = cp_z_ = 0;
 	lookat_theta_ = lookat_phi_ = .0f;
 	lookat_distance_ = 10.f;
+	add_object("axes", new Axes());
+	add_object("target", new PointCloud(&target_, FL_YELLOW));
+}
+
+GlWindow::~GlWindow() {
+	for (auto& iter : render_objects_) {
+		delete iter.second;
+	}
 }
 
 void GlWindow::set_center_point(float x, float y, float z) {
@@ -39,18 +50,10 @@ void GlWindow::set_lookat_dis_delta(float ddis) {
 	redraw();
 }
 
-void GlWindow::load_pointcloud(const char* filename, Fl_Color color) {
-	pointclouds_.push_back(pointcloud::load_pointcloud(filename));
-	pointcloud_colors_.push_back(color);
-	std::cout << pointclouds_.back() << std::endl;
-	redraw();
-}
-
 int GlWindow::handle(int event) {
 	static int last_x = 0, last_y = 0;
 	float dtheta, dphi;
-	switch (event)
-	{
+	switch (event) {
 	case FL_PUSH:
 		last_x = Fl::event_x();
 		last_y = Fl::event_y();
@@ -68,11 +71,33 @@ int GlWindow::handle(int event) {
 		set_lookat_angle_delta(-dtheta, dphi);
 		return 1;
 	case FL_MOUSEWHEEL:
-		set_lookat_dis_delta(Fl::event_dy() / 10.0);
+		set_lookat_dis_delta(Fl::event_dy() / 5.0);
 		return 1;
 	default:
-		return Fl_Window::handle(event);
+		return Fl_Gl_Window::handle(event);
 	}
+}
+
+void GlWindow::add_object(const char* name, RenderObject* object) {
+	render_objects_[name] = object;
+}
+
+void GlWindow::remove_object(const char* name) {
+	auto iter = render_objects_.find(name);
+	if (iter == render_objects_.end()) return;
+	delete iter->second;
+	render_objects_.erase(iter);
+}
+
+void GlWindow::optimize_step(float lr) {
+	plane_.zero_grads();
+	remove_object("predicted");
+	auto& predicted = plane_.generate(target_.rows());
+	auto loss = pointcloud::ChamferLoss(predicted, target_);
+	predicted.backward(loss);
+	plane_.optimize(lr);
+	add_object("predicted", new PointCloud(&predicted, FL_WHITE));
+	redraw();
 }
 
 void GlWindow::fix_viewport(int w, int h) {
@@ -97,30 +122,8 @@ void GlWindow::draw() {
 	set_lookat();
 	glClearColor(0, 0, 0, 0);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-	glBegin(GL_LINES);
-	gl_color(FL_RED);
-	glVertex3f(0, 0, 0);
-	glVertex3f(1000, 0, 0);
-	glVertex3f(0, 0, 0);
-	glVertex3f(0, 1000, 0);
-	glVertex3f(0, 0, 0);
-	glVertex3f(0, 0, 1000);
-	gl_color(FL_BLUE);
-	glVertex3f(0, 0, 0);
-	glVertex3f(-1000, 0, 0);
-	glVertex3f(0, 0, 0);
-	glVertex3f(0, -1000, 0);
-	glVertex3f(0, 0, 0);
-	glVertex3f(0, 0, -1000);
-	glEnd();
-	for (int pc_i = 0; pc_i < pointclouds_.size(); ++pc_i) {
-		gl_color(pointcloud_colors_[pc_i]);
-		auto& pointcloud = pointclouds_[pc_i];
-		glBegin(GL_POINTS);
-		for (int i = 0; i < pointcloud.rows(); ++i) {
-			glVertex3f(pointcloud(i, 0), pointcloud(i, 1), pointcloud(i, 2));
-		}
-		glEnd();
+	for (auto& iter : render_objects_) {
+		iter.second->render();
 	}
 }
 
@@ -148,8 +151,9 @@ AppWindow::AppWindow(int w, int h, const char* l) :
 	}
 	set_center_point_btn_ = new Fl_Button(400, h - 60, 150, 40, "Set Center Point");
 	set_center_point_btn_->callback(set_center_point_btn_pushed_callback_, this);
+	fitting_step_btn_ = new Fl_Button(600, h - 60, 150, 40, "Fitting Step");
+	fitting_step_btn_->callback(fitting_step_btn_pushed_callback_, this);
 	end();
-	gl_window_->load_pointcloud("../pointcloud/pc_test.bin", FL_WHITE);
 }
 
 void AppWindow::set_center_point_btn_pushed_callback_(Fl_Widget* widget, void* data) {
@@ -164,6 +168,11 @@ void AppWindow::set_center_point_btn_pushed_callback_(Fl_Widget* widget, void* d
 		}
 	}
 	reinterpret_cast<AppWindow*>(data)->gl_window_->set_center_point(p[0], p[1], p[2]);
+}
+
+void AppWindow::fitting_step_btn_pushed_callback_(Fl_Widget* widget, void* data) {
+	AppWindow* app_window = static_cast<AppWindow*>(data);
+	app_window->gl_window_->optimize_step(1.0f);
 }
 
 }

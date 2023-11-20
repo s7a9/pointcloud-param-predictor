@@ -6,7 +6,9 @@ namespace pointcloud {
 
 using pointcloud_t = autograd::matrix_t;
 
-bool is_pointcloud(const autograd::matrix_t& matrix);
+inline bool is_pointcloud(const autograd::matrix_t& matrix) {
+	return matrix.cols() == 3;
+}
 
 /// The Earth Mover's Distance between two point clouds.
 pointcloud_t EMDLoss(
