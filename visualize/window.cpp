@@ -12,15 +12,14 @@ constexpr float min_lookat_distance = 1.0f;
 
 GlWindow::GlWindow(int x, int y, int w, int h, const char* l) :
 	Fl_Gl_Window(x, y, w, h, l),
-	target_(pointcloud::load_pointcloud(R"(pc_test1.bin)")),
-	plane_(pointcloud::pointcloud_t::Zero(2, 3),
-		  pointcloud::pointcloud_t::Zero(1, 3)) {
+	target_(pointcloud::load_pointcloud(R"(pc_test2.bin)")) {
 	end();
 	cp_x_ = cp_y_ = cp_z_ = 0;
 	lookat_theta_ = lookat_phi_ = .0f;
 	lookat_distance_ = 10.f;
 	add_object("axes", new Axes());
 	add_object("target", new PointCloud(&target_, FL_YELLOW));
+	model_ = new pointcloud::CylinderModel();
 }
 
 GlWindow::~GlWindow() {
@@ -71,7 +70,7 @@ int GlWindow::handle(int event) {
 		set_lookat_angle_delta(-dtheta, dphi);
 		return 1;
 	case FL_MOUSEWHEEL:
-		set_lookat_dis_delta(Fl::event_dy() / 5.0);
+		set_lookat_dis_delta(Fl::event_dy() / 5.0f);
 		return 1;
 	default:
 		return Fl_Gl_Window::handle(event);
@@ -90,12 +89,13 @@ void GlWindow::remove_object(const char* name) {
 }
 
 void GlWindow::optimize_step(float lr) {
-	plane_.zero_grads();
+	if (model_ == nullptr) return;
+	model_->zero_grads();
 	remove_object("predicted");
-	auto& predicted = plane_.generate(target_.rows());
+	auto& predicted = model_->generate(target_.rows());
 	auto loss = pointcloud::ChamferLoss(predicted, target_);
 	predicted.backward(loss);
-	plane_.optimize(lr);
+	model_->optimize(lr);
 	add_object("predicted", new PointCloud(&predicted, FL_WHITE));
 	redraw();
 }
@@ -158,7 +158,7 @@ AppWindow::AppWindow(int w, int h, const char* l) :
 
 void AppWindow::set_center_point_btn_pushed_callback_(Fl_Widget* widget, void* data) {
 	AppWindow* app_window = static_cast<AppWindow*>(data);
-	int p[3];
+	float p[3];
 	for (int dim = 0; dim < 3; ++dim) {
 		try {
 			p[dim] = std::stof(app_window->center_point_text_buffer_[dim]->text());

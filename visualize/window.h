@@ -55,7 +55,7 @@ protected:
 
 	pointcloud::pointcloud_t target_;
 
-	pointcloud::PlaneModel plane_;
+	pointcloud::ModelBase* model_;
 };
 
 class AppWindow : public Fl_Window {

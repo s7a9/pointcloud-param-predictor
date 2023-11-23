@@ -62,8 +62,9 @@ protected:
 		functions_.push_back(function);
 	}
 
-	inline void add_var(autograd::Variable&& variable) {
+	inline autograd::Variable* add_var(autograd::Variable&& variable) {
 		variables_.push_back(variable);
+		return &variables_.back();
 	}
 
 	inline void add_param(autograd::Variable* param, const std::string& name) {
@@ -85,14 +86,30 @@ protected:
 class LineModel : public ModelBase {
 public:
 	/// end_points is a 2x3 matrix, each row is a point
-	LineModel(autograd::matrix_t&& end_points);
+	LineModel(
+		autograd::matrix_t&& end_points = autograd::matrix_t::Zero(2, 3)
+	);
 
 	autograd::Variable& generate(size_t sample_num);
 };
 
 class PlaneModel : public ModelBase {
 public:
-	PlaneModel(autograd::matrix_t&& span, autograd::matrix_t&& cornor);
+	PlaneModel(
+		autograd::matrix_t&& span = autograd::matrix_t::Zero(2, 3),
+		autograd::matrix_t&& cornor = autograd::matrix_t::Zero(1, 3)
+	);
+
+	autograd::Variable& generate(size_t sample_num);
+};
+
+class CylinderModel : public ModelBase {
+public:
+	CylinderModel(
+		autograd::matrix_t&& axis_root = autograd::matrix_t::Zero(1, 3),
+		autograd::matrix_t&& axis_dir = autograd::matrix_t::Zero(1, 3),
+		float radius = 1.0f
+	);
 
 	autograd::Variable& generate(size_t sample_num);
 };

@@ -69,4 +69,26 @@ void Multiply::backward(const Variable* father, const std::vector<Variable*>& ch
     children[1]->backward(children[0]->data().transpose() * father->grad());
 }
 
+Variable MakeScaleMat::forward(const std::vector<Variable*>& input) const {
+    if (input.size() != 1) {
+		throw std::logic_error("MakeScaleMat::forward - only accept one input");
+	}
+    if (input[0]->data().cols() != 1) {
+        throw std::logic_error("MakeScaleMat::forward - only accept input of nx1");
+    }
+    if (mat_size_ == 0) {
+		throw std::logic_error("MakeScaleMat::forward - mat size not set");
+    }
+	add_deg_out(input);
+	matrix_t result = matrix_t::Identity(mat_size_, mat_size_);
+    for (int i = 0; i < mat_size_; ++i) {
+		result(i, i) = input[0]->data()(i, 0);
+	}
+	return Variable(std::move(result), this, with_grad_, input);
+}
+
+void MakeScaleMat::backward(const Variable* father, const std::vector<Variable*>& children) const {
+	children[0]->backward(father->grad().diagonal());
+}
+
 }

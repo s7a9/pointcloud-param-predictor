@@ -21,7 +21,7 @@ public:
     virtual void backward(const Variable* father, const std::vector<Variable*>& children) const = 0;
 
     template <class FuncType>
-    FuncType* as() { return reinterpret_cast<FuncType*>(this); }
+    FuncType* as() { return dynamic_cast<FuncType*>(this); }
 
 protected:
     bool with_grad_ = true;
@@ -74,6 +74,22 @@ public:
     Variable forward(const std::vector<Variable*>& input) const;
 
     void backward(const Variable* father, const std::vector<Variable*>& children) const;
+};
+
+class MakeScaleMat : public Function {
+public:
+	MakeScaleMat() = default;
+
+	explicit MakeScaleMat(size_t mat_size): mat_size_(mat_size) {}
+
+	inline void set_mat_size(size_t mat_size) { mat_size_ = mat_size; }
+
+	Variable forward(const std::vector<Variable*>& input) const;
+
+	void backward(const Variable* father, const std::vector<Variable*>& children) const;
+
+private:
+    size_t mat_size_ = 0;
 };
 
 }

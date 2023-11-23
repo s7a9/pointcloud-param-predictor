@@ -55,6 +55,19 @@ inline int plane_test() {
 	return 0;
 }
 
+inline int cylinder_test() {
+	using namespace pointcloud;
+	using namespace autograd;
+	matrix_t axis_root(1, 3), axis_dir(1, 3);
+	axis_root << 1, 1.4, 1.7;
+	axis_dir << -2, 2, 3;
+	CylinderModel cylinder(std::move(axis_root), std::move(axis_dir), 1);
+	auto& pc = cylinder.generate(400);
+	std::cout << pc << std::endl;
+	save_pointcloud("pc_test2.bin", pc);
+	return 0;
+}
+
 typedef int(*test_func_t)();
 
 int main() {
@@ -63,6 +76,7 @@ int main() {
 		{"autograd", autograd_test},
 		{"pointcloud", pointcloud_test},
 		{"plane_test", plane_test},
+		{"cylinder_test", cylinder_test}
 	};
 	for (auto& test : tests) {
 		std::cout << "Testing " << test.first << "..." << std::endl;
